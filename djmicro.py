@@ -1,4 +1,4 @@
-import os
+import os, types
 
 _base_module = None
 
@@ -15,23 +15,32 @@ def configure(options={}, module=None):
             DEBUG = True,
             ROOT_URLCONF = module.__name__,
             TEMPLATE_DIRS = [os.path.dirname(module.__file__)],
-            INSTALLED_APPS = []
+            INSTALLED_APPS = [],
+            MIDDLEWARE_CLASSES = ('django.middleware.common.CommonMiddleware',)
         )
         opts.update(options)
         settings.configure(**opts)
     
     # urls
-    from django.conf.urls.defaults import patterns
+    from django.conf.urls import patterns
     module.urlpatterns = patterns('')
+
+    # wsgi application
+    from django.core.wsgi import get_wsgi_application
+    module.application = get_wsgi_application()
         
     global _base_module
     _base_module = module
 
 def route(*args, **kwargs):
     def add_route(view):
-        from django.conf.urls.defaults import patterns, url
+        # if it's a class-based view, take .as_view() of it
+        from django.views.generic import View
+        target = view.as_view() if isinstance(view, types.TypeType) and issubclass(view, View) else view
+
+        from django.conf.urls import patterns, url
         _base_module.urlpatterns += patterns('',
-            url(args[0], view, *args[1:], **kwargs)
+            url(args[0], target, *args[1:], **kwargs)
         )
         return view
     return add_route
