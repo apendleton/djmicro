@@ -2,7 +2,7 @@ import os, types
 
 _base_module = None
 
-def configure(options={}, module=None):
+def configure(options={}, module=None, local_settings=None):
     if not module:
         # hack to figure out where we were called from
         import sys, inspect
@@ -19,6 +19,11 @@ def configure(options={}, module=None):
             MIDDLEWARE_CLASSES = ('django.middleware.common.CommonMiddleware',)
         )
         opts.update(options)
+
+        if local_settings:
+            ls_opts = {k: v for k, v in local_settings.__dict__.iteritems() if not k.startswith('__')}
+            opts.update(ls_opts)
+
         settings.configure(**opts)
     
     # urls
